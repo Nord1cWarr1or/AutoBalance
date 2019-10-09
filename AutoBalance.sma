@@ -7,13 +7,19 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.0.7";
+new const PLUGIN_VERSION[] = "0.0.8";
 
 const MAX_DIFFERENCE = 1;
 new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
 
 new g_iBlueColor[3]	= { 0, 0, 255 };
 new g_iRedColor[3]	= { 255, 0, 0 };
+
+new g_bitIsUserConnected;
+
+#define get_bit(%1,%2) (%1 & (1 << (%2 & 31)))
+#define set_bit(%1,%2) %1 |= (1 << (%2 & 31))
+#define clr_bit(%1,%2) %1 &= ~(1 << (%2 & 31))
 
 public plugin_init()
 {
@@ -23,14 +29,23 @@ public plugin_init()
 	RegisterHookChain(RG_CBasePlayer_Killed, "OnPlayerKilledPost", true);
 }
 
+public client_putinserver(id)
+{
+	set_bit(g_bitIsUserConnected, id);
+}
+
 public client_disconnected(id)
 {
-	CheckTeams();
+	if(get_bit(g_bitIsUserConnected, id))
+	{
+		CheckTeams();
+		clr_bit(g_bitIsUserConnected, id);
+	}
 }
 
 public OnPlayerKilledPost(victim, killer)
 {
-	if(!is_user_connected(killer) || killer == victim)
+	if(!get_bit(g_bitIsUserConnected, killer) || killer == victim)
 		return;
 
 	CheckTeams();
@@ -49,9 +64,6 @@ public CheckTeams()
 	for(new i; i < iPlayersNum; i++)
 	{
 		iPlayer = iPlayers[i];
-
-		if(is_user_duelist(iPlayer) || ap_is_user_afk(iPlayer))
-			continue;
 
 		iTeam = get_member(iPlayer, m_iTeam);
 
@@ -74,6 +86,12 @@ public CheckTeams()
 		{
 			iRandomPlayer = iPlayersInTeam[TEAM_CT][random(iCountInTeam[TEAM_CT])];
 			g_iNewPlayerTeam[iRandomPlayer] = TEAM_CT;
+		}
+
+		if(is_user_duelist(iRandomPlayer) || ap_is_user_afk(iRandomPlayer))
+		{
+			CheckTeams();
+			return;
 		}
 
 		log_amx("Balanced player: %n", iRandomPlayer);
