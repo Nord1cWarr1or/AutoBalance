@@ -7,7 +7,9 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.1.0-debug";
+new const PLUGIN_VERSION[] = "0.1.1";
+
+#define DEBUG
 
 const MAX_DIFFERENCE = 1;
 new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
@@ -38,6 +40,9 @@ public client_disconnected(id)
 {
 	if(get_bit(g_bitIsUserConnected, id))
 	{
+		#if defined DEBUG
+		log_amx("Player %n disconnected", id);
+		#endif
 		CheckTeams();
 		clr_bit(g_bitIsUserConnected, id);
 	}
@@ -47,6 +52,10 @@ public OnPlayerKilledPost(victim, killer)
 {
 	if(!get_bit(g_bitIsUserConnected, killer) || killer == victim)
 		return;
+
+	#if defined DEBUG
+	log_amx("Player %n killed", victim);
+	#endif
 
 	CheckTeams();
 }
@@ -70,7 +79,9 @@ public CheckTeams()
 		iPlayersInTeam[iTeam][iCountInTeam[iTeam]++] = iPlayer;
 	}
 
+	#if defined DEBUG
 	log_amx("TE = %i, CT = %i", iCountInTeam[TEAM_TERRORIST], iCountInTeam[TEAM_CT]);
+	#endif
 
 	if(xs_abs(iCountInTeam[TEAM_TERRORIST] - iCountInTeam[TEAM_CT]) > MAX_DIFFERENCE)
 	{
@@ -90,11 +101,15 @@ public CheckTeams()
 
 		if(is_user_duelist(iRandomPlayer) || ap_is_user_afk(iRandomPlayer))
 		{
+			#if defined DEBUG
 			log_amx("Player: %n in duel or afk", iRandomPlayer);
+			#endif
 			return;
 		}
 
+		#if defined DEBUG
 		log_amx("Balanced player: %n", iRandomPlayer);
+		#endif
 
 		rg_switch_team(iRandomPlayer);
 		rg_round_respawn(iRandomPlayer);
