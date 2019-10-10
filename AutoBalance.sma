@@ -7,7 +7,7 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.0.8-edit";
+new const PLUGIN_VERSION[] = "0.0.9-debug";
 
 const MAX_DIFFERENCE = 1;
 new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
@@ -104,10 +104,13 @@ public CheckTeams()
 
 public OnPlayerSpawnPost(id)
 {
-	if(!g_iNewPlayerTeam[id])
+	if(!get_bit(g_bitIsUserConnected, id))
 		return;
 
 	if(!is_user_alive(id))
+		return;
+
+	if(!g_iNewPlayerTeam[id])
 		return;
 
 	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iRedColor : g_iBlueColor, 0.3, 1.5, 100);
