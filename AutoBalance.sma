@@ -7,7 +7,7 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.1.1";
+new const PLUGIN_VERSION[] = "0.1.2";
 
 #define DEBUG
 
@@ -16,6 +16,8 @@ new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
 
 new g_iBlueColor[3]	= { 0, 0, 255 };
 new g_iRedColor[3]	= { 255, 0, 0 };
+
+const TASKID__SHOW_HUD = 991;
 
 new g_bitIsUserConnected;
 
@@ -41,7 +43,7 @@ public client_disconnected(id)
 	if(get_bit(g_bitIsUserConnected, id))
 	{
 		#if defined DEBUG
-		log_amx("Player %n disconnected", id);
+		log_amx("Player <%n> disconnected", id);
 		#endif
 		CheckTeams();
 		clr_bit(g_bitIsUserConnected, id);
@@ -54,7 +56,7 @@ public OnPlayerKilledPost(victim, killer)
 		return;
 
 	#if defined DEBUG
-	log_amx("Player %n killed", victim);
+	log_amx("Player <%n> killed", victim);
 	#endif
 
 	CheckTeams();
@@ -102,13 +104,13 @@ public CheckTeams()
 		if(is_user_duelist(iRandomPlayer) || ap_is_user_afk(iRandomPlayer))
 		{
 			#if defined DEBUG
-			log_amx("Player: %n in duel or afk", iRandomPlayer);
+			log_amx("Player: <%n> in duel or afk", iRandomPlayer);
 			#endif
 			return;
 		}
 
 		#if defined DEBUG
-		log_amx("Balanced player: %n", iRandomPlayer);
+		log_amx("Balanced player: <%n>", iRandomPlayer);
 		#endif
 
 		rg_switch_team(iRandomPlayer);
@@ -118,9 +120,6 @@ public CheckTeams()
 
 public OnPlayerSpawnPost(id)
 {
-	if(!get_bit(g_bitIsUserConnected, id))
-		return;
-
 	if(!is_user_alive(id))
 		return;
 
@@ -129,12 +128,23 @@ public OnPlayerSpawnPost(id)
 
 	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iRedColor : g_iBlueColor, 0.3, 1.5, 100);
 
-	set_task(0.1, "ShowHud", id + 991);
+	set_task(0.1, "ShowHud", id + TASKID__SHOW_HUD);
+
+	#if defined DEBUG
+	log_amx("Player's ID: %i", id);
+	#endif
 }
 
 public ShowHud(id)
 {
-	id -= 991
+	if(!get_bit(g_bitIsUserConnected, id))
+		return;
+
+	id -= TASKID__SHOW_HUD;
+
+	#if defined DEBUG
+	log_amx("Player's ID on ShowHud: %i", id);
+	#endif
 
 	set_dhudmessage(255, 255, 255, -1.0, 0.42, 0, 0.0, 3.0, 0.1, 0.1);
 	show_dhudmessage(id, "Вы были перемещены за %s", g_iNewPlayerTeam[id] == TEAM_CT ? "террористов" : "контр-террористов");
