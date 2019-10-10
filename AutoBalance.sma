@@ -7,7 +7,7 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.0.9-debug";
+new const PLUGIN_VERSION[] = "0.1.0-debug";
 
 const MAX_DIFFERENCE = 1;
 new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
@@ -91,7 +91,6 @@ public CheckTeams()
 		if(is_user_duelist(iRandomPlayer) || ap_is_user_afk(iRandomPlayer))
 		{
 			log_amx("Player: %n in duel or afk", iRandomPlayer);
-			CheckTeams();
 			return;
 		}
 
