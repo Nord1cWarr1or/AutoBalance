@@ -7,7 +7,7 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.1.3";
+new const PLUGIN_VERSION[] = "0.1.4";
 
 #define DEBUG
 
@@ -111,13 +111,13 @@ public CheckTeams()
 		}
 
 		#if defined DEBUG
-		log_amx("Balanced player: <%n>", iRandomPlayer);
+		log_amx("Balanced player: <%n>, ID: %i", iRandomPlayer, iRandomPlayer);
 		#endif
+
+		g_bIsPlayerBalanced[iRandomPlayer] = true;
 
 		rg_switch_team(iRandomPlayer);
 		rg_round_respawn(iRandomPlayer);
-
-		g_bIsPlayerBalanced[iRandomPlayer] = true;
 	}
 }
 
