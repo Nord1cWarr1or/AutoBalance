@@ -7,12 +7,13 @@
 #include <knife_duel_arena>
 #include <sky>
 
-new const PLUGIN_VERSION[] = "0.1.2";
+new const PLUGIN_VERSION[] = "0.1.3";
 
 #define DEBUG
 
 const MAX_DIFFERENCE = 1;
 new TeamName:g_iNewPlayerTeam[MAX_PLAYERS + 1];
+new g_bIsPlayerBalanced[MAX_PLAYERS + 1];
 
 new g_iBlueColor[3]	= { 0, 0, 255 };
 new g_iRedColor[3]	= { 255, 0, 0 };
@@ -115,6 +116,8 @@ public CheckTeams()
 
 		rg_switch_team(iRandomPlayer);
 		rg_round_respawn(iRandomPlayer);
+
+		g_bIsPlayerBalanced[iRandomPlayer] = true;
 	}
 }
 
@@ -123,12 +126,14 @@ public OnPlayerSpawnPost(id)
 	if(!is_user_alive(id))
 		return;
 
-	if(!g_iNewPlayerTeam[id])
+	if(!g_bIsPlayerBalanced[id])
 		return;
 
 	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iRedColor : g_iBlueColor, 0.3, 1.5, 100);
 
 	set_task(0.1, "ShowHud", id + TASKID__SHOW_HUD);
+
+	g_bIsPlayerBalanced[id] = false;
 
 	#if defined DEBUG
 	log_amx("Player's ID: %i", id);
@@ -137,10 +142,10 @@ public OnPlayerSpawnPost(id)
 
 public ShowHud(id)
 {
+	id -= TASKID__SHOW_HUD;
+
 	if(!get_bit(g_bitIsUserConnected, id))
 		return;
-
-	id -= TASKID__SHOW_HUD;
 
 	#if defined DEBUG
 	log_amx("Player's ID on ShowHud: %i", id);
@@ -150,6 +155,4 @@ public ShowHud(id)
 	show_dhudmessage(id, "Вы были перемещены за %s", g_iNewPlayerTeam[id] == TEAM_CT ? "террористов" : "контр-террористов");
 
 	ClientPrintToAllExcludeOne(id, id, "^4* ^3%n ^1был перемещён за ^3%s", id, g_iNewPlayerTeam[id] == TEAM_CT ? "террористов" : "контр-террористов");
-
-	g_iNewPlayerTeam[id] = TEAM_UNASSIGNED;
 }
