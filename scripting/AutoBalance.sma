@@ -4,7 +4,7 @@
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.2-beta";
+new const PLUGIN_VERSION[] = "0.3.3-beta";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -40,6 +40,8 @@ const TASKID__SHOW_HUD			= 992;
 new g_bitIsUserConnected;
 new g_bitIsUserBalanced;
 
+new bool:g_bNeedRestoreHP;
+
 new Float:g_flSpawnCT[3], Float:g_flSpawnTE[3];
 
 public plugin_init()
@@ -57,6 +59,7 @@ public plugin_init()
 	#endif
 
 	FindSpawnEntities();
+	CheckMap();
 
 	#if defined DEBUG
 	register_clcmd("say /ct", "CheckTeams");
@@ -77,6 +80,12 @@ public FindSpawnEntities()
 
 	get_entvar(iSpawnEntCT, var_origin, g_flSpawnCT);
 	get_entvar(iSpawnEntTE, var_origin, g_flSpawnTE);
+}
+
+public CheckMap()
+{
+	if(equal(MapName, "35hp_", 5) || equal(MapName, "1hp_", 4))
+		g_bNeedRestoreHP = true;
 }
 
 public client_putinserver(id)
@@ -186,7 +195,14 @@ public BalancePlayer(id)
 	switch(g_iCvar[MODE])
 	{
 		case 1: rg_round_respawn(id);
-		case 2: set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnTE : g_flSpawnCT);
+		case 2:
+		{
+			if(g_bNeedRestoreHP)
+			{
+				set_entvar(id, var_health, 100.0);
+			}
+			set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnTE : g_flSpawnCT);
+		}
 	}
 
 	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iRedColor : g_iBlueColor, 0.5, 2.5, 100);
@@ -203,7 +219,7 @@ public ShowHud(id)
 	set_dhudmessage(255, 255, 255, -1.0, 0.42, 0, 0.0, 3.0, 0.1, 0.1);
 	show_dhudmessage(id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_DHUD_BALANCED_TE" : "DMTB_DHUD_BALANCED_CT");
 
-	ClientPrintToAllExcludeOne(id, id, "%l", id, g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_CHAT_BALANCED_TE" : "DMTB_CHAT_BALANCED_CT");
+	ClientPrintToAllExcludeOne(id, id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_CHAT_BALANCED_TE" : "DMTB_CHAT_BALANCED_CT", id);
 }
 
 public CreateCvars()
