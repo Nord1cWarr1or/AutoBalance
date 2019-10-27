@@ -4,7 +4,7 @@
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.3-beta";
+new const PLUGIN_VERSION[] = "0.3.5-beta";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -38,7 +38,6 @@ const TASKID__BALANCE_PLAYER	= 991;
 const TASKID__SHOW_HUD			= 992;
 
 new g_bitIsUserConnected;
-new g_bitIsUserBalanced;
 
 new bool:g_bNeedRestoreHP;
 
@@ -68,8 +67,8 @@ public plugin_init()
 
 public FindSpawnEntities()
 {
-	new iSpawnEntCT = rg_find_ent_by_class(-1, CT_SPAWN, true);
-	new iSpawnEntTE = rg_find_ent_by_class(-1, TE_SPAWN, true);
+	new iSpawnEntCT = rg_find_ent_by_class(MaxClients, CT_SPAWN, true);
+	new iSpawnEntTE = rg_find_ent_by_class(MaxClients, TE_SPAWN, true);
 
 	if(!iSpawnEntCT || !iSpawnEntTE)
 	{
@@ -84,6 +83,14 @@ public FindSpawnEntities()
 
 public CheckMap()
 {
+	#if !defined MapName
+		#if !defined MAX_MAPNAME_LENGTH
+		#define MAX_MAPNAME_LENGTH 64
+		#endif
+	new MapName[MAX_MAPNAME_LENGTH];
+	rh_get_mapname(MapName, charsmax(MapName), MNT_TRUE);
+	#endif
+
 	if(equal(MapName, "35hp_", 5) || equal(MapName, "1hp_", 4))
 		g_bNeedRestoreHP = true;
 }
@@ -93,7 +100,7 @@ public client_putinserver(id)
 	SetBit(g_bitIsUserConnected, id);
 }
 
-public client_disconnected(id)
+public client_remove(id)
 {
 	if(GetBit(g_bitIsUserConnected, id))
 	{
@@ -121,13 +128,13 @@ public OnPlayerKilledPost(victim, killer)
 public CheckTeams()
 {
 	if(task_exists(TASKID__BALANCE_PLAYER))
-		return;
+		return PLUGIN_HANDLED;
 
 	new iPlayers[MAX_PLAYERS], iPlayersNum;
 
 	get_players_ex(iPlayers, iPlayersNum, GetPlayers_ExcludeBots | GetPlayers_ExcludeHLTV);
 
-	new iPlayersInTeam[TeamName][16], iCountInTeam[TeamName];
+	new iPlayersInTeam[TeamName][MAX_PLAYERS], iCountInTeam[TeamName];
 	new TeamName:iTeam;
 	new iPlayer;
 
@@ -152,12 +159,12 @@ public CheckTeams()
 		if(iTeamToBalance == 1)
 		{
 			iRandomPlayer = iPlayersInTeam[TEAM_TERRORIST][random(iCountInTeam[TEAM_TERRORIST])];
-			g_iNewPlayerTeam[iRandomPlayer] = TEAM_TERRORIST;
+			g_iNewPlayerTeam[iRandomPlayer] = TEAM_CT;
 		}
 		else if(iTeamToBalance == -1)
 		{
 			iRandomPlayer = iPlayersInTeam[TEAM_CT][random(iCountInTeam[TEAM_CT])];
-			g_iNewPlayerTeam[iRandomPlayer] = TEAM_CT;
+			g_iNewPlayerTeam[iRandomPlayer] = TEAM_TERRORIST;
 		}
 
 		#if defined DEBUG
@@ -171,21 +178,33 @@ public CheckTeams()
 			#endif
 
 			RequestFrame("CheckTeams");
-			return;
+			return PLUGIN_HANDLED;
 		}
 
-		SetBit(g_bitIsUserBalanced, iRandomPlayer);
+		new iData[1]; iData[0] = iRandomPlayer;
 
-		set_task(g_iCvar[TIME_TO_PREPARE], "BalancePlayer", iRandomPlayer + TASKID__BALANCE_PLAYER);
+		set_task(g_iCvar[TIME_TO_PREPARE], "BalancePlayer", TASKID__BALANCE_PLAYER, iData, sizeof iData);
 
 		set_dhudmessage(255, 255, 255, -1.0, 0.42, 0, 0.0, 3.0, 0.1, 0.1);
 		show_dhudmessage(iRandomPlayer, "%l", "DMTB_DHUD_WILL_BALANCED", g_iCvar[TIME_TO_PREPARE]);
 	}
+	return PLUGIN_HANDLED;
 }
 
-public BalancePlayer(id)
+public BalancePlayer(iData[])
 {
-	id -= TASKID__BALANCE_PLAYER;
+	new id = iData[0];
+
+	if(!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	new TeamName:iTeam = get_member(id, m_iTeam);
+	
+	if(iTeam == TEAM_SPECTATOR || iTeam == g_iNewPlayerTeam[id])
+	{
+		RequestFrame("CheckTeams");
+		return PLUGIN_HANDLED;
+	}
 
 	if(user_has_weapon(id, CSW_C4))
 		rg_drop_items_by_slot(id, C4_SLOT);
@@ -201,15 +220,14 @@ public BalancePlayer(id)
 			{
 				set_entvar(id, var_health, 100.0);
 			}
-			set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnTE : g_flSpawnCT);
+			set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnCT : g_flSpawnTE);
 		}
 	}
 
-	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iRedColor : g_iBlueColor, 0.5, 2.5, 100);
+	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iBlueColor : g_iRedColor, 0.5, 2.5, 100);
 
 	set_task(0.1, "ShowHud", TASKID__SHOW_HUD + id);
-
-	ClrBit(g_bitIsUserBalanced, id);
+	return PLUGIN_CONTINUE;
 }
 
 public ShowHud(id)
@@ -217,9 +235,9 @@ public ShowHud(id)
 	id -= TASKID__SHOW_HUD;
 	
 	set_dhudmessage(255, 255, 255, -1.0, 0.42, 0, 0.0, 3.0, 0.1, 0.1);
-	show_dhudmessage(id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_DHUD_BALANCED_TE" : "DMTB_DHUD_BALANCED_CT");
+	show_dhudmessage(id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_DHUD_BALANCED_CT" : "DMTB_DHUD_BALANCED_TE");
 
-	ClientPrintToAllExcludeOne(id, id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_CHAT_BALANCED_TE" : "DMTB_CHAT_BALANCED_CT", id);
+	ClientPrintToAllExcludeOne(id, id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_CHAT_BALANCED_CT" : "DMTB_CHAT_BALANCED_TE", id);
 }
 
 public CreateCvars()
