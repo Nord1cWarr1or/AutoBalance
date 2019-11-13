@@ -4,7 +4,7 @@
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.5-beta";
+new const PLUGIN_VERSION[] = "0.3.6";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -21,7 +21,8 @@ enum _:Cvars
 	MAX_DIFF,
 	MODE,
 	Float:TIME_TO_PREPARE,
-	IMMUNITY_FLAG[2]
+	IMMUNITY_FLAG[2],
+	BOTS
 };
 
 new g_iCvar[Cvars];
@@ -104,10 +105,6 @@ public client_remove(id)
 {
 	if(GetBit(g_bitIsUserConnected, id))
 	{
-		#if defined DEBUG
-		log_amx("Player <%n> disconnected", id);
-		#endif
-
 		CheckTeams();
 		ClrBit(g_bitIsUserConnected, id);
 	}
@@ -132,7 +129,7 @@ public CheckTeams()
 
 	new iPlayers[MAX_PLAYERS], iPlayersNum;
 
-	get_players_ex(iPlayers, iPlayersNum, GetPlayers_ExcludeBots | GetPlayers_ExcludeHLTV);
+	get_players_ex(iPlayers, iPlayersNum, g_iCvar[BOTS] ? GetPlayers_ExcludeHLTV : (GetPlayers_ExcludeBots | GetPlayers_ExcludeHLTV));
 
 	new iPlayersInTeam[TeamName][MAX_PLAYERS], iCountInTeam[TeamName];
 	new TeamName:iTeam;
@@ -259,6 +256,12 @@ public CreateCvars()
 	bind_pcvar_string(create_cvar("dmtb_immunity", "a",
 		.description = GetCvarDesc("DMTB_CVAR_IMMUNITY")),
 		g_iCvar[IMMUNITY_FLAG], charsmax(g_iCvar[IMMUNITY_FLAG]));
+
+	bind_pcvar_num(create_cvar("dmtb_bots", "0",
+		.description = GetCvarDesc("DMTB_CVAR_BOTS"),
+		.has_min = true, .min_val = 0.0,
+		.has_max = true, .max_val = 1.0),
+		g_iCvar[BOTS]);
 }
 
 stock ClientPrintToAllExcludeOne(const iExcludePlayer, const iSender, const szMessage[], any:...)
@@ -275,6 +278,7 @@ stock ClientPrintToAllExcludeOne(const iExcludePlayer, const iSender, const szMe
 
 		if(iPlayer != iExcludePlayer)
 		{
+			SetGlobalTransTarget(iPlayer);
 			client_print_color(iPlayer, iSender, szText);
 		}
 	}
