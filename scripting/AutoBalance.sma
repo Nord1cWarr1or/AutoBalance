@@ -4,7 +4,7 @@
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.6";
+new const PLUGIN_VERSION[] = "0.3.7";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -42,7 +42,10 @@ new g_bitIsUserConnected;
 
 new bool:g_bNeedRestoreHP;
 
-new Float:g_flSpawnCT[3], Float:g_flSpawnTE[3];
+new Float:g_flSpawnCT[20][3], Float:g_flSpawnTE[20][3];
+new g_iNumSpawnsCT, g_iNumSpawnsTE;
+
+new g_pCvarMode;
 
 public plugin_init()
 {
@@ -55,7 +58,7 @@ public plugin_init()
 	CreateCvars();
 
 	#if defined AUTO_CFG
-	AutoExecConfig(true);
+	AutoExecConfig(true, "AutoBalance");
 	#endif
 
 	FindSpawnEntities();
@@ -68,31 +71,32 @@ public plugin_init()
 
 public FindSpawnEntities()
 {
-	new iSpawnEntCT = rg_find_ent_by_class(MaxClients, CT_SPAWN, true);
-	new iSpawnEntTE = rg_find_ent_by_class(MaxClients, TE_SPAWN, true);
+	new iSpawnEntCT = MaxClients;
+	new iSpawnEntTE = MaxClients;
 
-	if(!iSpawnEntCT || !iSpawnEntTE)
+	while((iSpawnEntCT = rg_find_ent_by_class(iSpawnEntCT, CT_SPAWN, true)))
 	{
-		log_amx("Couldn't find default spawn etities. Plugin automatucally switched to first mode.");
-		set_pcvar_bounds(g_iCvar[MODE], CvarBound_Upper, true, 1.0);
-		return;
+		get_entvar(iSpawnEntCT, var_origin, g_flSpawnCT[g_iNumSpawnsCT++]);
 	}
 
-	get_entvar(iSpawnEntCT, var_origin, g_flSpawnCT);
-	get_entvar(iSpawnEntTE, var_origin, g_flSpawnTE);
+	while((iSpawnEntTE = rg_find_ent_by_class(iSpawnEntTE, TE_SPAWN, true)))
+	{
+		get_entvar(iSpawnEntTE, var_origin, g_flSpawnTE[g_iNumSpawnsTE++]);
+	}
+	
+	if(!g_iNumSpawnsCT || !g_iNumSpawnsTE)
+	{
+		log_amx("Couldn't find default spawn etities. Plugin automatucally switched to first mode.");
+		set_pcvar_bounds(g_pCvarMode, CvarBound_Upper, true, 1.0); 
+	}
 }
 
 public CheckMap()
 {
-	#if !defined MapName
-		#if !defined MAX_MAPNAME_LENGTH
-		#define MAX_MAPNAME_LENGTH 64
-		#endif
-	new MapName[MAX_MAPNAME_LENGTH];
-	rh_get_mapname(MapName, charsmax(MapName), MNT_TRUE);
-	#endif
+	new szMapName[MAX_MAPNAME_LENGTH];
+	rh_get_mapname(szMapName, charsmax(szMapName), MNT_TRUE);
 
-	if(equal(MapName, "35hp_", 5) || equal(MapName, "1hp_", 4))
+	if(equal(szMapName, "35hp_", 5) || equal(szMapName, "1hp_", 4))
 		g_bNeedRestoreHP = true;
 }
 
@@ -110,13 +114,13 @@ public client_remove(id)
 	}
 }
 
-public OnPlayerKilledPost(victim, killer)
+public OnPlayerKilledPost(iVictim, iKiller)
 {
-	if(!GetBit(g_bitIsUserConnected, killer) || killer == victim)
+	if(!GetBit(g_bitIsUserConnected, iKiller) || iKiller == iVictim)
 		return;
 
 	#if defined DEBUG
-	log_amx("Player <%n> killed", victim);
+	log_amx("Player <%n> killed", iVictim);
 	#endif
 
 	CheckTeams();
@@ -217,7 +221,7 @@ public BalancePlayer(iData[])
 			{
 				set_entvar(id, var_health, 100.0);
 			}
-			set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnCT : g_flSpawnTE);
+			set_entvar(id, var_origin, g_iNewPlayerTeam[id] == TEAM_CT ? g_flSpawnCT[random(g_iNumSpawnsCT)] : g_flSpawnTE[random(g_iNumSpawnsTE)]);
 		}
 	}
 
@@ -244,7 +248,7 @@ public CreateCvars()
 		.has_min = true, .min_val = 1.0),
 		g_iCvar[MAX_DIFF]);
 
-	bind_pcvar_num(create_cvar("dmtb_mode", "1",
+	bind_pcvar_num(g_pCvarMode = create_cvar("dmtb_mode", "1",
 		.description = GetCvarDesc("DMTB_CVAR_MODE")),
 		g_iCvar[MODE]);
 
