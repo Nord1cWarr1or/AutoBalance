@@ -1,10 +1,26 @@
+/*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+*																	*
+*	Plugin: Automatic command balance for DM servers				*
+*																	*
+*	Official plugin support: https://dev-cs.ru/threads/8029/		*
+*	Contacts of the author: Telegram: @NordicWarrior				*
+*																	*
+*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+*																	*
+*	Плагин: Автоматический баланс команд для DM сереров				*
+*																	*
+*	Официальная поддержка плагина: https://dev-cs.ru/threads/8029/	*
+*	Связь с автором: Telegram: @NordicWarrior						*
+*																	*
+*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*/
+
 #include <amxmodx>
 #include <amxmisc>
 #include <reapi>
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.8";
+new const PLUGIN_VERSION[] = "0.3.9";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -72,6 +88,11 @@ public plugin_init()
 	#if defined DEBUG
 	register_clcmd("say /ct", "CheckTeams");
 	#endif
+}
+
+public OnConfigsExecuted()
+{
+	register_cvar("dmtb_version", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED);
 }
 
 public FindSpawnEntities()
@@ -170,7 +191,7 @@ public CheckTeams()
 	{
 		GetPlayerForBalance(g_iCountAdminsInTeam[TEAM_TERRORIST], g_iCountAdminsInTeam[TEAM_CT], true);
 	}
-	ArrayZeroing();
+	ArraysZeroing();
 	return PLUGIN_HANDLED;
 }
 
@@ -179,24 +200,28 @@ GetPlayerForBalance(const iNumTE, const iNumCT, bool:bAdmins = false)
 	new iTeamToBalance = xs_sign(iNumTE - iNumCT);
 	new iRandomPlayer;
 
-	if(iTeamToBalance == 1 && !bAdmins)
+	if(iTeamToBalance == 1)
 	{
-		iRandomPlayer = g_iPlayersInTeam[TEAM_TERRORIST][random(g_iCountPlayersInTeam[TEAM_TERRORIST])];
+		if(!bAdmins)
+		{
+			iRandomPlayer = g_iPlayersInTeam[TEAM_TERRORIST][random(g_iCountPlayersInTeam[TEAM_TERRORIST])];
+		}
+		else
+		{
+			iRandomPlayer = g_iAdminsInTeam[TEAM_TERRORIST][random(g_iCountAdminsInTeam[TEAM_TERRORIST])];
+		}
 		g_iNewPlayerTeam[iRandomPlayer] = TEAM_CT;
 	}
-	else if(iTeamToBalance == -1 && !bAdmins)
+	else
 	{
-		iRandomPlayer = g_iPlayersInTeam[TEAM_CT][random(g_iCountPlayersInTeam[TEAM_CT])];
-		g_iNewPlayerTeam[iRandomPlayer] = TEAM_TERRORIST;
-	}
-	else if(iTeamToBalance == 1 && bAdmins)
-	{
-		iRandomPlayer = g_iAdminsInTeam[TEAM_TERRORIST][random(g_iCountAdminsInTeam[TEAM_TERRORIST])];
-		g_iNewPlayerTeam[iRandomPlayer] = TEAM_CT;
-	}
-	else if(iTeamToBalance == -1 && bAdmins)
-	{
-		iRandomPlayer = g_iAdminsInTeam[TEAM_CT][random(g_iCountAdminsInTeam[TEAM_CT])];
+		if(!bAdmins)
+		{
+			iRandomPlayer = g_iPlayersInTeam[TEAM_CT][random(g_iCountPlayersInTeam[TEAM_CT])];
+		}
+		else
+		{
+			iRandomPlayer = g_iAdminsInTeam[TEAM_CT][random(g_iCountAdminsInTeam[TEAM_CT])];
+		}
 		g_iNewPlayerTeam[iRandomPlayer] = TEAM_TERRORIST;
 	}
 
@@ -248,11 +273,6 @@ public BalancePlayer(iData[])
 
 	rg_switch_team(id);
 
-	if(has_flag(id, g_iCvar[ADMIN_FLAG]) && g_iCvar[ADMIN_MODE] == 2)
-	{
-		RequestFrame("CheckTeams");
-	}
-
 	switch(g_iCvar[MODE])
 	{
 		case 1: rg_round_respawn(id);
@@ -269,6 +289,8 @@ public BalancePlayer(iData[])
 	UTIL_ScreenFade(id, g_iNewPlayerTeam[id] == TEAM_CT ? g_iBlueColor : g_iRedColor, 0.5, 2.5, 100);
 
 	set_task(0.1, "ShowHud", TASKID__SHOW_HUD + id);
+
+	RequestFrame("CheckTeams");
 	return PLUGIN_CONTINUE;
 }
 
@@ -282,7 +304,7 @@ public ShowHud(id)
 	ClientPrintToAllExcludeOne(id, id, "%l", g_iNewPlayerTeam[id] == TEAM_CT ? "DMTB_CHAT_BALANCED_CT" : "DMTB_CHAT_BALANCED_TE", id);
 }
 
-ArrayZeroing()
+ArraysZeroing()
 {
 	arrayset(g_iPlayersInTeam[any:0][0], 0, sizeof g_iPlayersInTeam * sizeof g_iPlayersInTeam[]);
 	arrayset(g_iCountPlayersInTeam[any:0], 0, sizeof g_iCountPlayersInTeam);
