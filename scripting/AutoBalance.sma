@@ -1,18 +1,19 @@
-/*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*
-*																	*
-*	Plugin: Automatic command balance for DM servers				*
-*																	*
-*	Official plugin support: https://dev-cs.ru/threads/8029/		*
-*	Contacts of the author: Telegram: @NordicWarrior				*
-*																	*
-*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*
-*																	*
-*	Плагин: Автоматический баланс команд для DM сереров				*
-*																	*
-*	Официальная поддержка плагина: https://dev-cs.ru/threads/8029/	*
-*	Связь с автором: Telegram: @NordicWarrior						*
-*																	*
-*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*/
+/* *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+*                                                                    *
+*    Plugin: Automatic command balance for DM servers                *
+*                                                                    *
+*    Official plugin support: https://dev-cs.ru/threads/8029/        *
+*    Contacts of the author: Telegram: @NordicWarrior                *
+*                                                                    *
+*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+*                                                                    *
+*    Плагин: Автоматический баланс команд для DM сереров             *
+*                                                                    *
+*    Официальная поддержка плагина: https://dev-cs.ru/threads/8029/  *
+*    Связь с автором: Telegram: @NordicWarrior                       *
+*                                                                    *
+*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  * */
+
 
 #include <amxmodx>
 #include <amxmisc>
