@@ -22,6 +22,10 @@
 
 new const PLUGIN_VERSION[] = "0.3.10";
 
+#if !defined MAX_MAPNAME_LENGTH
+#define MAX_MAPNAME_LENGTH 64
+#endif
+
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
 #define GetBit(%1,%2) (%1 & (1 << (%2 & 31)))
