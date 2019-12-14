@@ -14,14 +14,13 @@
 *                                                                    *
 *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  * */
 
-
 #include <amxmodx>
 #include <amxmisc>
 #include <reapi>
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.9";
+new const PLUGIN_VERSION[] = "0.3.10";
 
 #define GetCvarDesc(%0) fmt("%L", LANG_SERVER, %0)
 
@@ -61,7 +60,7 @@ new g_bitIsUserConnected;
 
 new bool:g_bNeedRestoreHP;
 
-new Float:g_flSpawnCT[20][3], Float:g_flSpawnTE[20][3];
+new Float:g_flSpawnCT[24][3], Float:g_flSpawnTE[24][3];
 new g_iNumSpawnsCT, g_iNumSpawnsTE;
 
 new g_pCvarMode;
@@ -116,6 +115,10 @@ public FindSpawnEntities()
 		log_amx("Couldn't find default spawn etities. Plugin automatucally switched to first mode.");
 		set_pcvar_bounds(g_pCvarMode, CvarBound_Upper, true, 1.0); 
 	}
+
+	#if defined DEBUG
+	log_amx("CT spawns = %i, TE spawns = %i", g_iNumSpawnsCT, g_iNumSpawnsTE);
+	#endif
 }
 
 public CheckMap()
@@ -158,6 +161,8 @@ public CheckTeams()
 	if(task_exists(TASKID__BALANCE_PLAYER))
 		return PLUGIN_HANDLED;
 
+	ArraysZeroing();
+
 	new iPlayers[MAX_PLAYERS], iPlayersNum;
 
 	get_players_ex(iPlayers, iPlayersNum, g_iCvar[BOTS] ? GetPlayers_ExcludeHLTV : (GetPlayers_ExcludeBots | GetPlayers_ExcludeHLTV));
@@ -181,24 +186,34 @@ public CheckTeams()
 
 	#if defined DEBUG
 	log_amx("TE = %i, CT = %i", g_iCountPlayersInTeam[TEAM_TERRORIST], g_iCountPlayersInTeam[TEAM_CT]);
-	log_amx("ADM TE = %i, ADM CT = %i", g_iCountAdminsInTeam[TEAM_TERRORIST], g_iCountAdminsInTeam[TEAM_CT]);
+
+	if(g_iCvar[ADMIN_MODE] == 2)
+	{
+		log_amx("ADM TE = %i, ADM CT = %i", g_iCountAdminsInTeam[TEAM_TERRORIST], g_iCountAdminsInTeam[TEAM_CT]);
+	}
 	#endif
 
 	if(xs_abs(g_iCountPlayersInTeam[TEAM_TERRORIST] - g_iCountPlayersInTeam[TEAM_CT]) > g_iCvar[MAX_DIFF])
 	{
-		GetPlayerForBalance(g_iCountPlayersInTeam[TEAM_TERRORIST], g_iCountPlayersInTeam[TEAM_CT]);
+		new iTeamPlayersForBalance = xs_sign(g_iCountPlayersInTeam[TEAM_TERRORIST] - g_iCountPlayersInTeam[TEAM_CT]);
+		
+		if(g_iCvar[ADMIN_MODE] == 2 && xs_abs(g_iCountAdminsInTeam[TEAM_TERRORIST] - g_iCountAdminsInTeam[TEAM_CT]) > g_iCvar[MAX_DIFF_ADMINS])
+		{
+			new iTeamAdminsForBalance = xs_sign(g_iCountAdminsInTeam[TEAM_TERRORIST] - g_iCountAdminsInTeam[TEAM_CT]);
+
+			if(iTeamPlayersForBalance == iTeamAdminsForBalance)
+			{
+				GetPlayerForBalance(iTeamAdminsForBalance, true);
+				return PLUGIN_HANDLED;
+			}
+		}
+		GetPlayerForBalance(iTeamPlayersForBalance);
 	}
-	else if(g_iCvar[ADMIN_MODE] == 2 && xs_abs(g_iCountAdminsInTeam[TEAM_TERRORIST] - g_iCountAdminsInTeam[TEAM_CT]) > g_iCvar[MAX_DIFF_ADMINS])
-	{
-		GetPlayerForBalance(g_iCountAdminsInTeam[TEAM_TERRORIST], g_iCountAdminsInTeam[TEAM_CT], true);
-	}
-	ArraysZeroing();
 	return PLUGIN_HANDLED;
 }
 
-GetPlayerForBalance(const iNumTE, const iNumCT, bool:bAdmins = false)
+GetPlayerForBalance(const iTeamToBalance, bool:bAdmins = false)
 {
-	new iTeamToBalance = xs_sign(iNumTE - iNumCT);
 	new iRandomPlayer;
 
 	if(iTeamToBalance == 1)
@@ -230,7 +245,7 @@ GetPlayerForBalance(const iNumTE, const iNumCT, bool:bAdmins = false)
 	log_amx("Balanced player: <%n>, ID: %i", iRandomPlayer, iRandomPlayer);
 	#endif
 
-	if(!bAdmins && has_flag(iRandomPlayer, g_iCvar[ADMIN_FLAG]) && (g_iCvar[ADMIN_MODE] == 1 || g_iCvar[ADMIN_MODE] == 2))
+	if(!bAdmins && has_flag(iRandomPlayer, g_iCvar[ADMIN_FLAG]) && g_iCvar[ADMIN_MODE] != 0)
 	{
 		#if defined DEBUG
 		log_amx("Player <%n> has immunity", iRandomPlayer);
