@@ -1,6 +1,6 @@
 /* *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
 *                                                                    *
-*    Plugin: Automatic command balance for DM servers                *
+*    Plugin: Automatic team balance for DM servers                   *
 *                                                                    *
 *    Official plugin support: https://dev-cs.ru/threads/8029/        *
 *    Contacts of the author: Telegram: @NordicWarrior                *
@@ -20,7 +20,7 @@
 #include <xs>
 #include <screenfade_util>
 
-new const PLUGIN_VERSION[] = "0.3.11";
+new const PLUGIN_VERSION[] = "0.3.12";
 
 #if !defined MAX_MAPNAME_LENGTH
 #define MAX_MAPNAME_LENGTH 64
@@ -96,7 +96,7 @@ public plugin_init()
 
 public OnConfigsExecuted()
 {
-	register_cvar("dmtb_version", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED);
+	register_cvar("dmtb_NW_version", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED);
 }
 
 public FindSpawnEntities()
@@ -298,6 +298,11 @@ public BalancePlayer(iData[])
 
 	switch(g_Cvar[MODE])
 	{
+		case 0:
+		{
+			user_silentkill(id);
+			rg_round_respawn(id);
+		}
 		case 1: rg_round_respawn(id);
 		case 2:
 		{
@@ -343,7 +348,9 @@ public CreateCvars()
 		g_Cvar[MAX_DIFF]);
 
 	bind_pcvar_num(g_pCvarMode = create_cvar("dmtb_mode", "1",
-		.description = GetCvarDesc("DMTB_CVAR_MODE")),
+		.description = GetCvarDesc("DMTB_CVAR_MODE"),
+		.has_min = true, .min_val = 0.0,
+		.has_max = true, .max_val = 2.0),
 		g_Cvar[MODE]);
 
 	bind_pcvar_float(create_cvar("dmtb_time", "3.0",
@@ -351,8 +358,8 @@ public CreateCvars()
 		.has_min = true, .min_val = 1.0),
 		g_Cvar[TIME_TO_PREPARE]);
 
-	bind_pcvar_string(create_cvar("dmtb_immunity", "a",
-		.description = GetCvarDesc("DMTB_CVAR_IMMUNITY")),
+	bind_pcvar_string(create_cvar("dmtb_admin_flag", "a",
+		.description = GetCvarDesc("DMTB_CVAR_ADMIN_FLAG")),
 		g_Cvar[ADMIN_FLAG], charsmax(g_Cvar[ADMIN_FLAG]));
 
 	bind_pcvar_num(create_cvar("dmtb_bots", "0",
