@@ -5,6 +5,7 @@
 
 /*
 * Called before a player will be balanced
+* You can stop execution of balancing process execution by this forward
 *
 * @param id     Index of a player
 *
